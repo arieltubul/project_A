@@ -1,0 +1,23 @@
+function [] = SVM_prep(ayFilterd, fixedlocs, fixedPeaks, t_acc)
+% calculate frequency
+diff_ = diff(fixedlocs);
+diff_Time = 0.01 * [diff_ diff_(end)];
+freq = 1./diff_Time;
+
+% direvative +-3
+k = 1;
+div_ay = [];
+d = 3;
+for idz = fixedlocs
+    div_ay(k) = ayFilterd(idz+d) - ayFilterd(idz-d);
+    k = k+1;
+end 
+div_ay = div_ay';
+amp_az = fixedPeaks';
+
+%%  setting data_base
+features = [div_ay,amp_az];
+
+
+end
+
