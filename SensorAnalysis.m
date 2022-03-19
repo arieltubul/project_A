@@ -10,19 +10,18 @@ global MinPeakD MinPeakH N_periods cutoff sample_rate ...
 
 % enable data plots
 En_Data = 0; En_Filt = 0; En_Steps = 0; En_peaks = 0; En_features = 0;
-En_SVM2 = 0; En_SVM3 = 0; En_linerReg = 0; En_classifySVM = 0;
-En_predictSVM = 0;
+En_SVM2 = 0; En_SVM3 = 1; En_linerReg = 0; En_classifySVM = 1;
+En_predictSVM = 1;
 
 % type of sample - realtime or logfile
 % Important !! make new sensorlog file inside a day (not pass 00:00) !
-realtime_data = 0; log_file = './measurments/Forward/forward_5.mat';
+realtime_data = 0; log_file = './For_PROJECT/100m_fb_fb_fb_f_19.3.mat';
 % './measurments/Standing/in_place.mat'
 % './measurments/Backward/backward_5.mat'
 % './measurments/Forward/forward_5.mat'
-% './measurments/Circular/fw_circle.mat'
 
 % setup params, relevant for realtime = 1
-N_periods = 3; sample_rate = 100; period_real_time = 10;
+N_periods = 1; sample_rate = 100; period_real_time = 10;
 
 % data params
 MinPeakD = 0.4; MinPeakH = 0.55; cutoff = 1.5;
@@ -32,12 +31,12 @@ MinPeakD = 0.4; MinPeakH = 0.55; cutoff = 1.5;
 % hyper params
 w = 1.8; medfilter = 100;
 % weight for previous step
-% medfilter determines order of median filter for azimuth (for track)
+% medfilter determine order of median filter for azimuth (for track)
 
 % SVM_prep
 % define name for file of SVM_prep
-SVM_train = 'standing'; % 'forward' / 'backward' / 'standing'
-train_mode = 0; % 1 for training, 0 for inference
+SVM_train = 'backward'; % 'forward' / 'backward'
+train_mode = 0; % 1 if we train, either 0
 %% Acquire data
 
 % to make loop while only once
@@ -46,58 +45,54 @@ if(realtime_data == 0)
 end
 sessions = N_periods;
 
-
-if(realtime_data == 1)
-    m = mobiledev;
-    m.AccelerationSensorEnabled = 1;
-    m.OrientationSensorEnabled = 1;
-    m.SampleRate = sample_rate;
-    m.Logging = 1;
+if (realtime_data == 1)
+m = mobiledev;
+m.AccelerationSensorEnabled = 1;
+m.OrientationSensorEnabled = 1;
+m.SampleRate = sample_rate;
+m.Logging = 1;
 else
     m = 1;
 end
 
-
 start = 1;
 while(sessions > 0)
-    [acc, t_acc, orient, t_orient] = Setup(m);
-    L = min(length(t_acc), length(t_orient));
-    t_acc = t_acc(1:L,1); t_orient = t_orient(1:L,1);
-    acc = acc(1:L,1:3); orient = orient(1:L,1:3);
-    %% Filter noise
-    [axFilterd, ayFilterd, azFilterd] = FilterNoise(acc, t_acc);
+[acc, t_acc, orient, t_orient] = Setup(m);
+L = min(length(t_acc), length(t_orient));
+t_acc = t_acc(1:L,1); t_orient = t_orient(1:L,1);
+acc = acc(1:L,1:3); orient = orient(1:L,1:3);
+%% Filter noise
+[axFilterd, ayFilterd, azFilterd] = FilterNoise(acc, t_acc);
 
-    %% Plot data
-    DataPlot(axFilterd, ayFilterd, azFilterd, t_acc, orient, t_orient);
+%% Plot data
+DataPlot(axFilterd, ayFilterd, azFilterd, t_acc, orient, t_orient);
 
-    %% Count & Plot steps taken
-    [numSteps, fixedlocs, fixedPeaks] = FindSteps(ayFilterd, azFilterd, t_acc);
+%% Count & Plot steps taken
+[numSteps, fixedlocs, fixedPeaks] = FindSteps(ayFilterd, azFilterd, t_acc);
 
-    %% SVM_train
-    if(train_mode == 1)
-        SVM_Train(ayFilterd, fixedlocs, fixedPeaks, t_acc);
-    end
-    
-    %% SVM
-    if(train_mode == 0)
-        [new_lable] = SVM(ayFilterd, fixedlocs, fixedPeaks, t_acc);
-    
-        %% Data Process
-        % extract std & p2p
-        [features] = DataProcess(ayFilterd, azFilterd, fixedlocs, fixedPeaks, new_lable, t_acc);
-    
-        %%  linear regression
-        % predict step size
-        % Parameters studied using the linear regression estimator
-        [b, totalLength, stepLength] = Regression(features);
-    
-        %% plot walk -        *********************        unfinished         *******************
-        PlotTrack(new_lable, orient, fixedlocs, stepLength, sessions);
-        sessions = sessions - 1;
-    end 
-end %while
+%% SVM_train
+if(train_mode == 1)
+    SVM_Train(ayFilterd, fixedlocs, fixedPeaks, t_acc);
+end
 
+%% SVM
+if(train_mode == 0)
+    [new_lable] = SVM(ayFilterd, fixedlocs, fixedPeaks, t_acc);
 
+%% Data Process
+% extract std & p2p
+[features] = DataProcess(ayFilterd, azFilterd, fixedlocs, fixedPeaks, new_lable, t_acc);
+
+%%  linear regression
+% predict step size
+% Parameters studied using the linear regression estimator
+[b, totalLength, stepLength] = Regression(features);
+
+%% plot walk - unfinished
+PlotTrack(new_lable, orient, fixedlocs, stepLength, sessions);
+end
+sessions = sessions - 1;
+end
 %% Stop recording on phone
 if (realtime_data == 1)
     m.Logging = 0;

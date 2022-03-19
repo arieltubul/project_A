@@ -23,28 +23,27 @@ amp_az = fixedPeaks';
 features = [div_ay, amp_az, freq];
 db_backward = load('./SVM_train/backward_train.mat');
 db_forward = load('./SVM_train/forward_train.mat');
-db_standing = load('./SVM_train/standing_train.mat');
+% db_standing = load('./SVM_train/standing_train.mat');
 
 db_backward = cell2mat(struct2cell(db_backward));
 db_forward = cell2mat(struct2cell(db_forward));
-db_standing = cell2mat(struct2cell(db_standing));
-
-len = length(db_standing(:,1));
-half = len/2;
-db_walking = [db_backward(1:half, :); db_forward(1:(len-half), :)];
+% db_standing = cell2mat(struct2cell(db_standing));
+% len = length(db_standing(:,1));
+% half = len/2;
+% db_walking = [db_backward(1:half, :); db_forward(1:(len-half), :)];
 
 % draw db_Fw_Bw
 if (En_classifySVM ==1)
-    figure;
-    grid on; hold on;
-    scatter3(db_forward(:,1),db_forward(:,2),db_forward(:,3),'r','filled','LineWidth',10);
-    scatter3(db_backward(:,1),db_backward(:,2),db_backward(:,3),'b','filled','LineWidth',10);
+figure;
+grid on; hold on;
+scatter3(db_forward(:,1),db_forward(:,2),db_forward(:,3),'r','filled','LineWidth',10);
+scatter3(db_backward(:,1),db_backward(:,2),db_backward(:,3),'b','filled','LineWidth',10);
 
-    view(-30,10)
+view(-30,10)
 
-    xlabel('div_ay'); ylabel('amp_az'); zlabel('frequency');
-    legend('forward','backward');
-    hold off;
+xlabel('div_ay'); ylabel('amp_az'); zlabel('frequency');
+legend('forward','backward');
+hold off;
 end
 %{
 % draw db_Wa_St
@@ -69,12 +68,11 @@ svm_3d_plot(svmfit_,data_val_,data_class_,0);
 
 loss_train_data = loss(svmfit_, data_val_, data_class_);
 %}
-
 %% setting SVM for Backward/Forward
 forward = ones(length(db_forward),1);
 backward = - ones(length(db_backward),1) * 0;
 data_val = [db_forward(:,1), db_forward(:,2),db_forward(:,3); ...
-                    db_backward(:,1), db_backward(:,2),db_backward(:,3)];
+db_backward(:,1), db_backward(:,2),db_backward(:,3)];
 data_class = [forward; backward];
 svmfit = fitcsvm(data_val, data_class);
 svm_3d_plot(svmfit,data_val,data_class,1);
@@ -93,19 +91,17 @@ xlim([0,t_acc(end)]); grid on;
 title('prediction for walking / standing');
 legend('lable','score');
 %}
-
-
 %% SVM prediction Forward_Backward
 [lable, score] = predict(svmfit, features);
 score = score(:,2);
 if (En_predictSVM == 1)
-    figure;
-    subplot(211);
-    stem(t_acc(fixedlocs),lable,'filled'); hold on;
-    stem(t_acc(fixedlocs),score,'g'); hold off;
-    xlim([0,t_acc(end)]); grid on;
-    title('prediction for forward / backward');
-    legend('lable','score');
+figure;
+subplot(211);
+stem(t_acc(fixedlocs),lable,'filled'); hold on;
+stem(t_acc(fixedlocs),score,'g'); hold off;
+xlim([0,t_acc(end)]); grid on;
+title('prediction for forward / backward');
+legend('lable','score');
 end
 
 %% SVM improvment
@@ -139,15 +135,16 @@ for steps = fixedlocs % go through indexes
 end
 
 if (En_predictSVM == 1)
-    subplot(212);
-    stem(t_acc(fixedlocs),new_lable,'filled'); hold on;
-    stem(t_acc(fixedlocs),new_score,'g'); hold off;
-    xlim([0,t_acc(end)]); grid on;
-    legend('new lable','new score');
+subplot(212);
+stem(t_acc(fixedlocs),new_lable,'filled'); hold on;
+stem(t_acc(fixedlocs),new_score,'g'); hold off;
+xlim([0,t_acc(end)]); grid on;
+title('Improved prediction for forward / backward');
+legend('new lable','new score');
 end
 new_lable = new_lable';
 
 
 
-end %func
+end
 
